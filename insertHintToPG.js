@@ -1,21 +1,21 @@
 window.onload = function(){
-	insertToPG('webwork is not cool', 'webwork is cool');
+	insertHintToPG('A', 'B', 'C', 'D', 'E');
 }
 
 //find index of where to insert the hint
-function findIndex(sectionTitle, textArea){
+function findIndex(section, textArea, indicator){
 
 	//find index of where section begins
-	var sectionIndex = textArea.textContent.indexOf(sectionTitle);
+	var sectionIndex = textArea.textContent.indexOf(section);
 
 	var insertIndex = -1;
 
-	//find index of where to insert hint, starting after the section title 
-	for(var i = (sectionIndex + sectionTitle.length); i < textArea.textContent.length; i++){	
-		if(textArea.textContent.charAt(i) != '#' && textArea.textContent.charAt(i) != '\n'){
-			insertIndex = i-1;
-			break;
-		}		
+	if(indicator == 'before'){
+		insertIndex = sectionIndex - 1;
+	}
+
+	else if(indicator == 'after'){
+		insertIndex = sectionIndex + section.length;
 	}
 
 	//return where to insert hint
@@ -32,23 +32,47 @@ function splitAndInsert(textArea, beginIndex, endIndex, hintStr){
 	textArea.textContent = beginText + hintStr + endText;
 }
 
-//main method called when wanting to insert a hint to problem code
-function insertToPG(hint1, hint2){
+//surrounds hint content with new lines
+function surroundWithNewLines(hint){
+	return '\n' + hint + '\n';
+}
 
-	hint1 = '\n' + hint1 + '\n';
-	hint2 = '\n' + hint2 + '\n';
+//method to see if problem author is using PGML or Text to create problem
+function usingPGML(textArea){
+	if(textArea.textContent.indexOf('BEGIN_PGML') != -1){
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+	
+//main method called when wanting to insert a hint to problem code
+function insertHintToPG(hint, textHintA, textHintB, pgmlHintA, pgmlHintB){
 
 	//find main text area where problem text is held
 	//webwork uses name instead of id... only 1 of this element
 	var problemTextArea = document.getElementsByName('problemContents');
 	problemTextArea = problemTextArea[0];
+	
+	hint = surroundWithNewLines(hint);
+	splitAndInsert(problemTextArea, findIndex('TEXT(beginproblem());', problemTextArea, 'after'), problemTextArea.textContent.length, hint);
 
-	//find where to insert the first part of hint
-	var setupIndex = findIndex('Setup', problemTextArea);
-	splitAndInsert(problemTextArea, setupIndex, problemTextArea.textContent.length, hint1);
+	//figure out if using PGML or TEXT in problem PG code
+	if(usingPGML(problemTextArea)){
+		pgmlHintA = surroundWithNewLines(pgmlHintA);
+		pgmlHintB = surroundWithNewLines(pgmlHintB);
 
-	//find where to insert the second part of hint
-	var endTextIndex = problemTextArea.textContent.indexOf('END_TEXT')-1;
-	splitAndInsert(problemTextArea, endTextIndex, problemTextArea.textContent.length, hint2);
+		splitAndInsert(problemTextArea, findIndex('BEGIN_PGML', problemTextArea, 'after'), problemTextArea.textContent.length, pgmlHintA);
+		splitAndInsert(problemTextArea, findIndex('END_PGML', problemTextArea, 'before'), problemTextArea.textContent.length, pgmlHintB);
+	}
+
+	else{
+		textHintA = surroundWithNewLines(textHintA);
+		textHintB = surroundWithNewLines(textHintB);
+
+		splitAndInsert(problemTextArea, findIndex('BEGIN_TEXT', problemTextArea, 'after'), problemTextArea.textContent.length, textHintA);
+		splitAndInsert(problemTextArea, findIndex('END_TEXT', problemTextArea, 'before'), problemTextArea.textContent.length, textHintB);
+	}
 
 }
